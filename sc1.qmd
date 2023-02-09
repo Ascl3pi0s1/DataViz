@@ -53,6 +53,7 @@ df_shortGeometry = df_short.merge(
 ).dropna(subset =["geometry"])
 
 df_shortGeometry = geopandas.GeoDataFrame(df_shortGeometry)
+df_shortGeometry ["logpdc"]=np.log(df_shortGeometry.nbre_pdc)
 
 ```
 
@@ -63,12 +64,13 @@ Carte de la france représantant le nombre de borne Electrique par commune
 fig=px.choropleth_mapbox(df_shortGeometry,
                            geojson=df_shortGeometry.geometry,
                            locations=df_shortGeometry.index,
-                           color="nbre_pdc",
+                           color="logpdc",
                            center={"lat": 45.5517, "lon": 5},
                            mapbox_style="open-street-map",
                            zoom=5,
                            color_continuous_scale=["wheat","burlywood","orangered","red","darkred","purple"],
                            hover_name = "nom",
+                           hover_data=['nbre_pdc'],
                            title= "Carte de la france représantant le nombre de borne Electrique par commune",
                            labels={'nbre_pdc': 'Borne par ville'}
                            )
