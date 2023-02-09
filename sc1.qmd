@@ -29,7 +29,7 @@ df_short= (
 )
 
 
-geo_data = geopandas.read_file("data/communes.geojson")
+geo_data = geopandas.read_file("data\communes-version-simplifiee.geojson")
 
 
 df_short = (
@@ -50,25 +50,30 @@ df_shortGeometry = df_short.merge(
     geo_data,
     left_on = "code_insee_commune",
     right_on = "code"
-)
+).dropna(subset =["geometry"])
 
 df_shortGeometry = geopandas.GeoDataFrame(df_shortGeometry)
 
 ```
 
 
-
+Carte de la france représantant le nombre de borne Electrique par commune
 
 ```{python}
-px.choropleth_mapbox(df_shortGeometry,
+fig=px.choropleth_mapbox(df_shortGeometry,
                            geojson=df_shortGeometry.geometry,
                            locations=df_shortGeometry.index,
                            color="nbre_pdc",
                            center={"lat": 45.5517, "lon": 5},
                            mapbox_style="open-street-map",
-                           zoom=8.5,
-                           hover_name = "nom"
+                           zoom=5,
+                           color_continuous_scale=["wheat","burlywood","orangered","red","darkred","purple"],
+                           hover_name = "nom",
+                           title= "Carte de la france représantant le nombre de borne Electrique par commune",
+                           labels={'nbre_pdc': 'Borne par ville'}
                            )
+fig.update_layout(legend_title_text="sample data")
+fig.show()
 ```
 
 
