@@ -59,27 +59,6 @@ df_shortGeometry ["logpdc"]=np.log(df_shortGeometry.nbre_pdc)
 
 ```
 
-<<<<<<< HEAD
-
-Carte de la france représantant le nombre de borne Electrique par commune
-
-```{python}
-fig=px.choropleth_mapbox(df_shortGeometry,
-                           geojson=df_shortGeometry.geometry,
-                           locations=df_shortGeometry.index,
-                           color="logpdc",
-                           center={"lat": 45.5517, "lon": 5},
-                           mapbox_style="open-street-map",
-                           zoom=5,
-                           color_continuous_scale=["wheat","burlywood","orangered","red","darkred","purple"],
-                           hover_name = "nom",
-                           hover_data=['nbre_pdc'],
-                           title= "Carte de la france représantant le nombre de borne Electrique par commune",
-                           labels={'nbre_pdc': 'Borne par ville'}
-                           )
-fig.update_layout(legend_title_text="sample data")
-fig.show()
-=======
 # Gestion population 
 
 
@@ -136,7 +115,6 @@ df_parc_parCommune = (
         "libgeo": "first"})
   .reset_index()
 )
->>>>>>> merged_pop
 ```
 
 ## Analyse de voiture par habitant:
