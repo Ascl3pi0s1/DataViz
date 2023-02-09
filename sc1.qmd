@@ -78,5 +78,7 @@ fig.update_layout(legend_title_text="sample data")
 fig.show()
 ```
 
+## Analyse de voiture par habitant:
 
+voiture
 
