@@ -1,5 +1,7 @@
 data/
 *.txt
-*.ipynb
 *.html
 *_files/
+*.csv
+*.json
+
