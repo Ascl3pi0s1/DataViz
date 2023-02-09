@@ -18,6 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import seaborn as sns
 import plotly.express as px
+import plotly.graph_objects as go
 import folium
 import geopandas
 
@@ -40,7 +41,8 @@ df_short = (
     .groupby(by = "code_insee_commune")
     .agg({"nbre_pdc": np.sum, 
           "consolidated_longitude":"first",
-          "consolidated_latitude":"first"})
+          "consolidated_latitude":"first",
+          })
 
     .reset_index()
 
@@ -56,20 +58,214 @@ df_shortGeometry = geopandas.GeoDataFrame(df_shortGeometry)
 
 ```
 
-
+# Gestion population 
 
 
 ```{python}
-px.choropleth_mapbox(df_shortGeometry,
-                           geojson=df_shortGeometry.geometry,
-                           locations=df_shortGeometry.index,
-                           color="nbre_pdc",
-                           center={"lat": 45.5517, "lon": 5},
-                           mapbox_style="open-street-map",
-                           zoom=8.5,
-                           hover_name = "nom"
-                           )
+pop = pd.read_csv("data/pop/donnees_communes.csv", sep = ";")
+pop
+```
+
+```{python}
+meta_pop = pd.read_csv("data/pop/metadonnees_communes.csv", sep = ";")
+
+meta_pop = (
+  meta_pop
+  .loc[meta_pop.cod_var == "COM",:]
+)
+meta_pop
+```
+
+```{python}
+pop["code_commune"] = meta_pop.cod_mod.values
+pop
+```
+
+```{python}
+df_merged_pop = df_short.merge(
+  pop,
+  left_on = "code_insee_commune",
+  right_on = "code_commune"
+)
+
+df_merged_pop["hab_par_pompe"] = df_merged_pop.PMUN / df_merged_pop.nbre_pdc
+
+
+df_merged_popGeom = df_merged_pop.merge(
+    geo_data,
+    left_on = "code_insee_commune",
+    right_on = "code"
+)
+```
+
+# Gestion parc voiture
+
+
+```{python}
+df_parc = pd.read_csv("data/voitures-par-commune-par-energie.csv", sep = ";")
+
+df_parc_parCommune = (
+  df_parc
+  .loc[df_parc.date_arrete == "2022-12-31",:]
+  .groupby(by = "codgeo")
+  .agg({"nb_vp_rechargeables_el": np.sum,
+  	    "nb_vp_rechargeables_gaz": np.sum,
+    	  "nb_vp": np.sum,
+        "libgeo": "first"})
+  .reset_index()
+)
 ```
 
 
 
+
+```{python}
+def add_departements(df, insee_key):
+  meta_depart = pd.read_csv('data/pop/metadonnees_departements.csv', sep = ";")
+  meta_depart = (
+    meta_depart
+    .loc[meta_depart.lib_var == "Département",["cod_mod", "lib_mod"]]
+  )
+
+  df = (
+    df
+    .assign(code_dep = df[insee_key].str.slice(0,2))
+  )
+
+  df = df.merge(
+    meta_depart,
+    left_on = "code_dep",
+    right_on = "cod_mod"
+  )
+
+  return df
+```
+
+
+# Grapĥiques
+
+```{python}
+nb_pdc_departement = (
+  add_departements(df_short, "code_insee_commune")
+  .groupby(by = "code_dep")
+  .agg({"nbre_pdc": np.sum,
+        "lib_mod": "first"}) 
+  .reset_index()
+  
+)
+nb_pdc_departement
+```
+
+
+```{python}
+parc_dep = (
+  add_departements(df_parc_parCommune, "codgeo")
+  .groupby(by = "code_dep")
+  .agg({"nb_vp": np.sum,
+        "nb_vp_rechargeables_el": np.sum}) 
+  .reset_index()
+  
+
+)
+parc_dep
+```
+
+
+```{python}
+pop_dep = pd.read_csv("data/pop/donnees_departements.csv", sep = ";")
+
+pop_dep = pop_dep.loc[:,["CODDEP", "PMUN"]]
+pop_dep
+```
+
+```{python}
+
+```
+
+
+```{python}
+px.scatter(nb_pdc_departement.merge(
+                                  parc_dep,
+                                  on = "code_dep"
+                                ).merge(
+                                  pop_dep,
+                                  left_on = "code_dep",
+                                  right_on = "CODDEP"
+                                ),
+x = "nb_vp_rechargeables_el",
+y = "nbre_pdc",
+hover_name = "lib_mod",
+color = "PMUN",
+trendline = "ols"
+
+)
+```
+
+
+## Scatter departements
+faire apparaitre les départements:
+- 
+
+
+
+# Carte intréactive
+
+## Scatter: Stations de recharge
+
+```{python}
+px.scatter_mapbox(
+  df,
+  lat = "consolidated_latitude",
+  lon = "consolidated_longitude",
+  mapbox_style = "open-street-map",
+  hover_name = "nom_station",
+  center = go.layout.mapbox.Center(
+            lat=45.18839381524741,
+            lon=5.724469855557955
+  ),
+  zoom = 13
+)
+```
+
+
+
+## Choropleth: Nombre de points de recharge par commune
+
+TODO: Prendre le taux par habitant 
+
+```{python}
+px.choropleth_mapbox(
+  df_shortGeometry,
+  geojson=df_shortGeometry.geometry,
+  locations=df_shortGeometry.index,
+  color="nbre_pdc",
+  center={"lat": 45.18839381524741, "lon": 5.724469855557955},
+  mapbox_style="open-street-map",
+  zoom=10,
+  hover_name = "nom",
+
+)
+```
+
+```{python}
+to_choro = (
+  geopandas.GeoDataFrame(df_merged_popGeom)
+  .dropna(subset = "geometry")
+  .loc[:,["geometry", "code_insee_commune", "nbre_pdc", "hab_par_pompe", "nom"]]
+)
+to_choro
+```
+
+```{python}
+px.choropleth_mapbox(
+  to_choro,
+  geojson=to_choro.geometry,
+  locations=to_choro.index,
+  color="hab_par_pompe",
+  center={"lat": 45.18839381524741, "lon": 5.724469855557955},
+  mapbox_style="open-street-map",
+  zoom=10,
+  hover_name = "nom",
+
+)
+```
