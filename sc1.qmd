@@ -30,7 +30,7 @@ df_short= (
 )
 
 
-geo_data = geopandas.read_file("data\communes-version-simplifiee.geojson")
+geo_data = geopandas.read_file("data/communes-version-simplifiee.geojson")
 
 
 df_short = (
@@ -119,7 +119,6 @@ df_parc_parCommune = (
 
 ## Analyse de voiture par habitant:
 
-voiture
 
 
 ```{python}
@@ -142,6 +141,23 @@ def add_departements(df, insee_key):
   )
 
   return df
+```
+# Traffic
+
+```{python}
+traffic = geopandas.read_file("data/tmja/TMJA2019.shp")
+```
+
+```{python}
+traffic_par_dep = (
+  traffic
+  .loc[:,["route", "longueur", "depPrD", "TMJA"]]
+  .groupby(by = "depPrD")
+  .agg({"longueur": np.sum,
+        "TMJA": np.sum})
+  .reset_index()
+)
+
 ```
 
 
@@ -182,9 +198,70 @@ pop_dep
 ```
 
 ```{python}
-
+dep_merged = (
+  nb_pdc_departement.merge(
+                                  parc_dep,
+                                  on = "code_dep"
+                                ).merge(
+                                  pop_dep,
+                                  left_on = "code_dep",
+                                  right_on = "CODDEP"
+                                ).merge(
+                                  traffic_par_dep,
+                                  left_on = "code_dep",
+                                  right_on = "depPrD"
+                                )
+)
 ```
 
+```{python}
+dep_geometry = geopandas.read_file("data/departements.geojson")
+dep_geometry.sort_values(by = "code")
+```
+
+```{python}
+dep_merged = dep_merged.merge(
+  dep_geometry,
+  left_on = "code_dep",
+  right_on = "code") 
+```
+
+```{python}
+dep_merged = geopandas.GeoDataFrame(dep_merged)
+```
+
+```{python}
+dep_merged.info()
+```
+
+
+```{python}
+px.choropleth_mapbox(
+  dep_merged,
+  geojson=dep_merged.geometry,
+  locations=dep_merged.index,
+  color="PMUN",
+  center={"lat": 45.18839381524741, "lon": 5.724469855557955},
+  mapbox_style="open-street-map",
+  zoom=5,
+  hover_name = "nom",
+
+)
+```
+
+```{python}
+px.choropleth_mapbox(
+  dep_merged,
+  geojson=dep_merged.geometry,
+  locations=dep_merged.index,
+  color="TMJA",
+  center={"lat": 45.18839381524741, "lon": 5.724469855557955},
+  mapbox_style="open-street-map",
+  zoom=5,
+  hover_name = "nom",
+
+)
+```
 
 ```{python}
 px.scatter(nb_pdc_departement.merge(
